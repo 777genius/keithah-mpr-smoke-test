@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -22,10 +23,26 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      HAS_REVIEW_APP_CLIENT_ID: ${{ vars.REVIEW_APP_CLIENT_ID != '' }}
+      HAS_REVIEW_APP_PRIVATE_KEY: ${{ secrets.REVIEW_APP_PRIVATE_KEY != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Create review GitHub App token
+        id: app-token
+        if: ${{ env.HAS_REVIEW_APP_CLIENT_ID == 'true' && env.HAS_REVIEW_APP_PRIVATE_KEY == 'true' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.REVIEW_APP_CLIENT_ID }}
+          private-key: ${{ secrets.REVIEW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: keithah-mpr-smoke-test
+          permission-contents: read
+          permission-issues: write
+          permission-pull-requests: write
 
       - uses: actions/setup-node@v4
         with:
@@ -56,7 +73,7 @@ jobs:
       - name: Run multi-provider review
         uses: 777genius/multi-provider-code-review@fix/codex-oauth-exec
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
           REVIEW_PROVIDERS: codex/gpt-5.4-mini,codex/gpt-5.4
           SYNTHESIS_MODEL: codex/gpt-5.4-mini
