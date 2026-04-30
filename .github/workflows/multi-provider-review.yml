@@ -1,0 +1,68 @@
+name: Multi Provider Review Smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: mpr-smoke-${{ github.event.pull_request.number || inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install official Codex CLI
+        run: npm install -g @openai/codex@0.125.0
+
+      - name: Restore Codex OAuth config
+        env:
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+          CODEX_CONFIG_TOML: ${{ secrets.CODEX_CONFIG_TOML }}
+        run: |
+          test -n "$CODEX_AUTH_JSON"
+          mkdir -p ~/.codex
+          printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json
+          chmod 600 ~/.codex/auth.json
+          if [ -n "$CODEX_CONFIG_TOML" ]; then
+            printf '%s' "$CODEX_CONFIG_TOML" > ~/.codex/config.toml
+            chmod 600 ~/.codex/config.toml
+          fi
+
+      - name: Run multi-provider review
+        uses: keithah/multi-provider-code-review@main
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          REVIEW_PROVIDERS: codex/gpt-5-codex
+          SYNTHESIS_MODEL: codex/gpt-5-codex
+          PROVIDER_MAX_PARALLEL: '1'
+          PROVIDER_RETRIES: '0'
+          INLINE_MAX_COMMENTS: '5'
+          INLINE_MIN_SEVERITY: minor
+          INLINE_MIN_AGREEMENT: '1'
+          ENABLE_AI_DETECTION: 'false'
+          LEARNING_ENABLED: 'false'
+          GRAPH_ENABLED: 'false'
+          ENABLE_CACHING: 'false'
+          SKIP_TRIVIAL_CHANGES: 'false'
+          SKIP_DOCUMENTATION_ONLY: 'false'
