@@ -5,3 +5,8 @@ export function normalizeUserId(value) {
   }
   return id;
 }
+
+export async function findUserByEmail(db, email) {
+  const rows = await db.query(`SELECT * FROM users WHERE email = '${email}' LIMIT 1`);
+  return rows[0] || null;
+}
