@@ -27,7 +27,7 @@ jobs:
       HAS_REVIEW_APP_CLIENT_ID: ${{ vars.REVIEW_APP_CLIENT_ID != '' }}
       HAS_REVIEW_APP_PRIVATE_KEY: ${{ secrets.REVIEW_APP_PRIVATE_KEY != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -44,9 +44,9 @@ jobs:
           permission-issues: write
           permission-pull-requests: write
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install official Codex CLI
         run: npm install -g @openai/codex@0.125.0
@@ -86,6 +86,9 @@ jobs:
           INLINE_MAX_COMMENTS: '5'
           INLINE_MIN_SEVERITY: minor
           INLINE_MIN_AGREEMENT: '1'
+          MIN_CONFIDENCE: '0.6'
+          CONSENSUS_REQUIRED_FOR_CRITICAL: 'false'
+          CONSENSUS_MIN_AGREEMENT: '2'
           ENABLE_AI_DETECTION: 'false'
           LEARNING_ENABLED: 'false'
           GRAPH_ENABLED: 'false'
