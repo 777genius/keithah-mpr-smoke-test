@@ -48,6 +48,11 @@ jobs:
             chmod 600 ~/.codex/config.toml
           fi
 
+      - name: Verify Codex OAuth headless mode
+        run: |
+          codex exec --model gpt-5-codex --dangerously-bypass-approvals-and-sandbox --output-last-message /tmp/codex-smoke.txt "Respond with exactly: codex-oauth-ok"
+          grep -q "codex-oauth-ok" /tmp/codex-smoke.txt
+
       - name: Run multi-provider review
         uses: keithah/multi-provider-code-review@main
         with:
